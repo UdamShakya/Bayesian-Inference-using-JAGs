@@ -62,7 +62,7 @@ samples_multi<-coda.samples(
   variable.names = params_multi,
   n.iter = 5000
 )
-
+plot(samples_multi)
 
 summary(samples_multi)
 
