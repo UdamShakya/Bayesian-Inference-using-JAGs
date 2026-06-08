@@ -78,6 +78,10 @@ samples_multi<-coda.samples(
   variable.names = params,
   n.iter = 10000
 )
+
+sample_csample <- do.call(rbind,samples_multi)
+sample_csample
+
 plot(samples_multi)
 
 samples_multi %>% gelman.diag()
