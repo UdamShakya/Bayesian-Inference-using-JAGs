@@ -2,6 +2,7 @@ library(dplyr)
 library(rjags)
 library(coda)
 library(gapminder)
+library(ggplot2)
 
 installed.packages("coda")
 
@@ -72,11 +73,11 @@ mod <- jags.model(
 )
 
 update(mod,500)
-
+ dic.samples(mod,1000)
 samples_multi<-coda.samples(
   model=mod,
   variable.names = params,
-  n.iter = 10000
+  n.iter = 50000
 )
 
 sample_csample <- do.call(rbind,samples_multi)
@@ -87,7 +88,42 @@ plot(samples_multi)
 samples_multi %>% gelman.diag()
 
 autocorr.plot(samples_multi)
-effectiveSize(samples_multi)
+effectiveSize(samples_multi) # out of the 30000 samples mcmc samples are not independent , so this represents the amount of independent samples which provides information on the variables
+
+summary(samples_multi) # here what does naive SE and time series SE we Calculate the mean and variance through monte carlo integration . the monte carlo error is the naive Se and after removing the autocorrelation the monte carlo error is the time series SE.since after doing the the number of real independent samples number decreases therefore the time series Se is greater than the Naive Se
 
 
+#thinning to get rid of autocorrelation of the variables 
 
+thin <- 100
+
+thin_ind <- seq(1,nrow(sample_csample),thin) # thinning sequence 
+
+sample_csample_thinned <- sample_csample[thin_ind,] # a matrix cant apply summary or autocorrelation to this so need to convert it into a sample 
+
+sample_thinned<- as.mcmc(sample_csample_thinned) #sample now 
+
+summary(sample_thinned)
+sample_thinned %>% autocorr.plot()
+# run the simulation for more number of iterations and keep the thinning number high
+sample_thinned %>% effectiveSize()
+
+#residual analysis - difference between the predicted value and the observed value
+
+
+x<- cbind(rep(1.0, jags_data$n),jags_data$x)
+head(x)
+
+#posterior mean 
+
+pm_params1<-colMeans(sample_csample_thinned)
+pm_params1
+
+yhat1<- pm_params1[1]+pm_params1[2]*jags_data$x
+resid1 <- jags_data$lifeExp -yhat1
+plot(resid1) # features of regression residuals are normally distributed constant variance and no patterns can be seen in the plot of residuals . some of them are below 20 which measn there are some outliers 
+
+
+# qq plot 
+qqnorm(resid1)
+qqline(resid1,col="red",lwd=2) # we are not happy with this model as the plot strays away from the line so as a solution to it we add another predictor variable to it 
