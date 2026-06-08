@@ -20,7 +20,7 @@ cor.test(df_2007$lifeExp,df_2007$pop)
 linear_model<- lm(lifeExp ~log(gdpPercap), data= df_2007)
 linear_model %>% summary()
 
-plot(log(df_2007$gdpPercap),df_2007$lifeExp)
+plot(df_2007$gdpPercap %>% log(),df_2007$lifeExp)
 
 
 model_string <- "
@@ -84,4 +84,6 @@ samples_multi %>% gelman.diag()
 
 autocorr.plot(samples_multi)
 effectiveSize(samples_multi)
+
+
 
