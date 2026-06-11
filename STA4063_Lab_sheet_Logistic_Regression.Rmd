@@ -1,0 +1,194 @@
+---
+title: "STA4063 - Lab sheet - Logistic Regression"
+output: pdf_document
+date: "2026-06-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Learning Objectives
+
+By the end of this lab, you will be able to:
+
+1. Build a Bayesian logistic regression model.
+2. Specify likelihood and prior distributions.
+3. Fit the model using JAGS.
+4. Diagnose MCMC convergence.
+5. Interpret posterior distributions and odds ratios.
+
+---
+
+
+
+```{r setup, message=FALSE}
+
+library(rjags)
+library(coda)
+library(ggplot2)
+library(dplyr)
+```
+
+
+a) The dataset contains clinical measurements from patients.
+
+```{r}
+url <- 
+"https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+
+
+data <- read.csv(
+url,
+header=FALSE
+)
+
+
+names(data)<-c(
+"Pregnancy",
+"Glucose",
+"BloodPressure",
+"SkinThickness",
+"Insulin",
+"BMI",
+"DiabetesPedigree",
+"Age",
+"Outcome"
+)
+
+
+head(data)
+```
+
+
+b) Find the number of diabetic and non-diabetic patients.
+
+```{r}
+library(dplyr)
+
+data %>%
+  summarise(
+    n_diabetic = sum(Outcome == 1),
+    n_nondiabetic = sum(Outcome == 0),
+    total = n()
+  )
+```
+
+c) Calculate the proportion of diabetic patients.
+
+```{r}
+data %>% summarise(
+  Diabetic_proprtion = sum(data$Outcome==1) / data %>% nrow() , 
+  nondiabetic_proportion = sum(data$Outcome==0) / data %>% nrow()
+)
+
+
+```
+
+d) Calculate mean glucose level by diabetes status and discuss the result.
+
+```{r}
+#glimpse(data)
+mean(data$Glucose,data$Outcome)
+```
+
+
+e) Standardise the continuous predictors.
+
+```{r}
+data_Set <- data %>% 
+  mutate(Glucose=scale(Glucose),
+         BMI=scale(BMI),
+         Age=scale(Age)
+   )
+```
+
+
+f) Write the JAGS model specification.
+
+```{r}
+model_string23 <- "
+model{
+
+for(i in 1:n){
+
+y[i]~ dbern(p[i])
+
+logit(p[i]) <- beta0 + beta1*glucose[i]+ beta2*bmi[i] + beta3*age[i]
+
+}
+
+beta0 ~ dnorm(0,0.01)
+beta1 ~ dnorm(0,0.01)
+beta2 ~ dnorm(0,0.01)
+beta3 ~ dnorm(0,0.01)
+
+}
+"
+
+```
+
+g) Create the data list required by JAGS.
+
+```{r}
+data_list<- list(
+  y = data$Outcome ,
+  glucose=as.vector(data_Set$Glucose),
+  bmi= as.vector(data_Set$BMI),
+  age =as.vector(data_Set$Age) ,
+  n = nrow(data_Set)
+)
+
+
+```
+
+h) Compile the JAGS model, run MCMC sampling, and obtain posterior samples.
+
+```{r}
+
+# Compile model
+model <- jags.model(
+  textConnection(model_string23),
+  data     = data_list,
+  n.chains = 3
+)
+# Run MCMC
+update(model,500)
+# Obtain posterior samples
+samples_logit <- coda.samples(
+  model= model,
+  variable.names = c("beta0","beta1", "beta2","beta3"),
+  n.iter = 10000
+) 
+
+
+```
+
+
+i) Perform convergence diagnostics and discuss whether the chains have converged.
+
+```{r}
+plot(samples_logit)
+
+```
+
+j) Plot posterior densities of regression coefficients  and calculate posterior summaries.
+```{r}
+# Density plots
+
+
+# posterior mean
+
+#  posterior standard deviation
+
+
+# 95% credible interval
+```
+
+k) Convert the posterior estimates into odds ratios and interpret the effect of each predictor variable
+```{r}
+
+```
+
+
